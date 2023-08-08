@@ -23,6 +23,9 @@ type Slowloris struct {
 	// SendGibberish - whether to send gibberish data in the request header.
 	SendGibberish bool `name:"http-send-gibberish" help:"whether to send gibberish data in the request header"`
 
+	// GibberishInterval - the random interval to send gibberish data in the request header. Defaults to 3s.
+	GibberishInterval time.Duration `name:"http-gibberish-interval" help:"the random interval to send gibberish data in the request header"`
+
 	// dial - for unit test
 	dial func(network, address string) (net.Conn, error)
 
@@ -39,6 +42,9 @@ func (s *Slowloris) defaults() error {
 	}
 	if len(s.UserAgents) < 1 {
 		s.UserAgents = defaultUserAgents[:]
+	}
+	if s.GibberishInterval <= 0 {
+		s.GibberishInterval = 3 * time.Second
 	}
 	if s.dial == nil {
 		s.dial = net.Dial
@@ -118,13 +124,14 @@ func (s *Slowloris) worker(ctx context.Context) error {
 		return fmt.Errorf("init attack: %w", err)
 	}
 
+	gibberishInterval := s.GibberishInterval / time.Millisecond
 	var gibberishTimer *time.Timer
 	setGibberishTimer := func() <-chan time.Time {
 		if !s.SendGibberish {
 			return nil
 		}
 
-		nextInterval := time.Duration(s.randn(30_000)) * time.Millisecond
+		nextInterval := time.Duration(s.randn(int(gibberishInterval))) * time.Millisecond
 		if gibberishTimer != nil {
 			gibberishTimer.Reset(nextInterval)
 		} else {
