@@ -53,9 +53,9 @@ func gibberishValue(randn randn, size int) string {
 	const letters = firstLetters + "-"
 
 	b := make([]byte, size)
-	b[0] = firstLetters[randn(len(firstLetters))]
+	b[0] = firstLetters[randn(len(firstLetters) )]
 	b[size - 1] = firstLetters[randn(len(firstLetters))]
-	for i := 0; i < size - 2; i++ {
+	for i := 1; i <= size - 1; i++ {
 		b[i] = letters[randn(len(letters))]
 	}
 
