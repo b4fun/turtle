@@ -10,18 +10,18 @@ import (
 
 // Slowloris provides the configurations for running slowloris attack.
 type Slowloris struct {
-	Target *Target
+	Target *Target `embed:""`
 
 	// Method - the HTTP method to use. Defaults to GET
-	Method string
+	Method string `name:"http-method" help:"the HTTP method to use. Defaults to GET"`
 
 	// UserAgents - list of user agents to use.
 	// If more than one is provided, a random one will be selected.
 	// If none is provided, a default one will be used.
-	UserAgents []string
+	UserAgents []string `name:"http-user-agent" help:"list of user agents to use. If more than one is provided, a random one will be selected. If none is provided, a default one will be used."`
 
 	// SendGibberish - whether to send gibberish data in the request header.
-	SendGibberish bool
+	SendGibberish bool `name:"http-send-gibberish" help:"whether to send gibberish data in the request header"`
 
 	// dial - for unit test
 	dial func(network, address string) (net.Conn, error)

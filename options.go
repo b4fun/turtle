@@ -8,11 +8,11 @@ import (
 // Target provides target configuration.
 type Target struct {
 	// Url - the url of the target.
-	Url url.URL
+	Url url.URL `arg:"" name:"target-url" help:"the url of the target"`
 	// Duration - the duration of the attack. Defaults to 30s.
-	Duration time.Duration
+	Duration time.Duration `name:"target-duration" help:"the duration of the attack. Defaults to 30s"`
 	// Connections - the number of connections to be made. Defaults to 100.
-	Connections int
+	Connections int `name:"target-connections" help:"the number of connections to be made. Defaults to 100"`
 }
 
 func (t *Target) defaults() error {

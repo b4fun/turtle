@@ -2,34 +2,26 @@ package main
 
 import (
 	"context"
-	"net/url"
 	"os"
 	"os/signal"
-	"time"
+
+	"github.com/alecthomas/kong"
 
 	"github.com/b4fun/turtle"
 )
 
+var CLI struct {
+	Slowloris turtle.Slowloris `cmd:"slowloris" help:"Run slowloris attack"`
+}
+
 func main() {
-	s := turtle.Slowloris{
-		Target: &turtle.Target{
-			Url: func() url.URL {
-				p, err := url.Parse("http://localhost:3333")
-				if err != nil {
-					panic(err)
-				}
-				return *p
-			}(),
-			Duration:   30 * time.Second,
-			Connections: 100,
-		},
-		SendGibberish: true,
-	}
+	cliCtx := kong.Parse(&CLI)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	if err := s.Run(ctx); err != nil {
-		panic(err)
-	}
+	cliCtx.BindTo(ctx, (*context.Context)(nil))
+
+	err := cliCtx.Run()
+	cliCtx.FatalIfErrorf(err)
 }
