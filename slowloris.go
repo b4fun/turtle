@@ -3,6 +3,7 @@ package turtle
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"time"
@@ -26,6 +27,9 @@ type Slowloris struct {
 	// GibberishInterval - the random interval to send gibberish data in the request header. Defaults to 3s.
 	GibberishInterval time.Duration `name:"http-gibberish-interval" help:"the random interval to send gibberish data in the request header"`
 
+	// WriteTimeout - the timeout for writing the request header. Defaults to 10s.
+	WriteTimeout time.Duration `name:"http-write-timeout" help:"the timeout for writing the request header. Defaults to 10s."`
+
 	// dial - for unit test
 	dial func(network, address string) (net.Conn, error)
 
@@ -45,6 +49,9 @@ func (s *Slowloris) defaults() error {
 	}
 	if s.GibberishInterval <= 0 {
 		s.GibberishInterval = 3 * time.Second
+	}
+	if s.WriteTimeout <= 0 {
+		s.WriteTimeout = 10 * time.Second
 	}
 	if s.dial == nil {
 		s.dial = net.Dial
@@ -90,7 +97,7 @@ func (s *Slowloris) setupTCPConnIfNeeded(conn net.Conn) error {
 	return nil
 }
 
-func (s *Slowloris) initAttack(conn net.Conn) error {
+func (s *Slowloris) initAttack(conn io.Writer) error {
 	path := s.Target.Url.Path
 	if path == "" {
 		path = "/"
@@ -120,7 +127,12 @@ func (s *Slowloris) worker(ctx context.Context) error {
 		return fmt.Errorf("setup tcp conn: %w", err)
 	}
 
-	if err := s.initAttack(conn); err != nil {
+	c := &tcpConnWithWriteTimeout{
+		conn:         conn,
+		writeTimeout: s.WriteTimeout,
+	}
+
+	if err := s.initAttack(c); err != nil {
 		return fmt.Errorf("init attack: %w", err)
 	}
 
@@ -152,7 +164,7 @@ func (s *Slowloris) worker(ctx context.Context) error {
 			return nil
 		case <-setGibberishTimer():
 			k, v := gibberishValue(s.randn, 5), gibberishValue(s.randn, 5)
-			if err := writeHTTPHeaderTo(conn, k, v); err != nil {
+			if err := writeHTTPHeaderTo(c, k, v); err != nil {
 				return fmt.Errorf("write gibberish HTTP header: %w", err)
 			}
 		}

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"net"
 	"net/http"
+	"time"
 )
 
 type randn func(int) int
@@ -18,6 +20,21 @@ func defaultRandn() randn {
 		}
 		return int(v.Int64())
 	}
+}
+
+type tcpConnWithWriteTimeout struct {
+	conn         net.Conn
+	writeTimeout time.Duration
+}
+
+var _ io.Writer = (*tcpConnWithWriteTimeout)(nil)
+
+func (w *tcpConnWithWriteTimeout) Write(b []byte) (int, error) {
+	if err := w.conn.SetWriteDeadline(time.Now().Add(w.writeTimeout)); err != nil {
+		return 0, fmt.Errorf("SetWriteDeadline: %w", err)
+	}
+
+	return w.conn.Write(b)
 }
 
 var defaultUserAgents = []string{
@@ -53,9 +70,9 @@ func gibberishValue(randn randn, size int) string {
 	const letters = firstLetters + "-"
 
 	b := make([]byte, size)
-	b[0] = firstLetters[randn(len(firstLetters) )]
-	b[size - 1] = firstLetters[randn(len(firstLetters))]
-	for i := 1; i <= size - 1; i++ {
+	b[0] = firstLetters[randn(len(firstLetters))]
+	b[size-1] = firstLetters[randn(len(firstLetters))]
+	for i := 1; i <= size-1; i++ {
 		b[i] = letters[randn(len(letters))]
 	}
 
