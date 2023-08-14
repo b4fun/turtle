@@ -11,7 +11,8 @@ import (
 )
 
 var CLI struct {
-	Slowloris turtle.Slowloris `cmd:"slowloris" help:"Run slowloris attack"`
+	Slowloris    turtle.Slowloris           `cmd:"slowloris" help:"Run slowloris attack"`
+	SlowBodyRead turtle.SlowBodyReadRequest `cmd:"slow-body-read" help:"Run slow body read attack"`
 }
 
 func main() {

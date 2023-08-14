@@ -33,7 +33,7 @@ type Slowloris struct {
 	// dial - for unit test
 	dial func(network, address string) (net.Conn, error)
 
-	// rander - for unit test
+	// randn - for unit test
 	randn randn
 }
 
