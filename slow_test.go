@@ -1,7 +1,10 @@
 package turtle
 
 import (
+	"io"
 	"net/http"
+	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -9,17 +12,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Slowloris_defaults(t *testing.T) {
-	v := Slowloris{}
+func Test_SlowBodyReadRequest_defaults(t *testing.T) {
+	v := SlowBodyReadRequest{}
+
 	assert.NoError(t, v.defaults())
 
-	assert.Equal(t, http.MethodGet, v.Method)
-	assert.NotEmpty(t, v.UserAgents)
-	assert.NotNil(t, v.dial)
+	assert.Equal(t, http.MethodPost, v.Method)
 	assert.NotNil(t, v.randn)
 }
 
-func Test_Slowloris_vulnerable(t *testing.T) {
+func Test_SlowBodyReadRequest_vulnerable(t *testing.T) {
 	t.Parallel()
 
 	counter := testhttp.NewConnStateCounters()
@@ -28,12 +30,23 @@ func Test_Slowloris_vulnerable(t *testing.T) {
 	defer stopTest()
 
 	serverUrl, serverStopped := testhttp.CreateTestServer(testCtx, t, func(s *http.Server) {
-		s.ReadHeaderTimeout = 0 // hung forever
+		s.ReadTimeout = 0 // hung forever
 		s.ConnState = counter.ServerConnState
+		s.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Body == nil {
+				return
+			}
+			defer r.Body.Close()
+
+			_, err := io.Copy(io.Discard, r.Body)
+			if err != nil {
+				assert.True(t, os.IsTimeout(err), "read body should return timeout error")
+			}
+		})
 	})
 
 	target := getTestTarget(t, *serverUrl)
-	attack := Slowloris{Target: target, SendGibberish: true, GibberishInterval: 10 * time.Millisecond}
+	attack := SlowBodyReadRequest{Target: target}
 
 	assert.NoError(t, attack.Run(testCtx))
 	stopTest()
@@ -52,21 +65,34 @@ func Test_Slowloris_vulnerable(t *testing.T) {
 	}
 }
 
-func Test_Slowloris_invulnerable(t *testing.T) {
+func Test_SlowBodyReadRequest_invulnerable(t *testing.T) {
 	t.Parallel()
 
 	counter := testhttp.NewConnStateCounters()
+	timeoutErrSeen := new(atomic.Bool)
 
 	testCtx, stopTest := getTestContext()
 	defer stopTest()
 
 	serverUrl, serverStopped := testhttp.CreateTestServer(testCtx, t, func(s *http.Server) {
-		s.ReadHeaderTimeout = 1 * time.Second
+		s.ReadTimeout = 1 * time.Second
 		s.ConnState = counter.ServerConnState
+		s.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Body == nil {
+				return
+			}
+			defer r.Body.Close()
+
+			_, err := io.Copy(io.Discard, r.Body)
+			if err != nil {
+				assert.True(t, os.IsTimeout(err), "read body should return timeout error")
+				timeoutErrSeen.Store(true)
+			}
+		})
 	})
 
 	target := getTestTarget(t, *serverUrl)
-	attack := Slowloris{Target: target, SendGibberish: true, GibberishInterval: 10 * time.Millisecond}
+	attack := SlowBodyReadRequest{Target: target}
 
 	assert.NoError(t, attack.Run(testCtx))
 	stopTest()
@@ -79,8 +105,9 @@ func Test_Slowloris_invulnerable(t *testing.T) {
 	assert.Greater(t, len(conns), target.Connections, "should create more connections")
 	for _, conn := range conns {
 		timeline := counter.GetConnStateTimeline(conn)
-		assert.GreaterOrEqual(t, len(timeline), 2, "should have at least two states")
-		// a typical state transition is: new - (due to read header timeout close) -> active -> closed
+		assert.GreaterOrEqual(t, len(timeline), 2, "should have at least two state")
+		// a typical state transition is: new - (read body) -> active - (read body timeout close) -> closed
 		assert.Equal(t, http.StateNew, timeline[0])
 	}
+	assert.True(t, timeoutErrSeen.Load(), "should see at least onetimeout error")
 }
