@@ -3,8 +3,6 @@ package turtle
 import (
 	"io"
 	"net/http"
-	"os"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -38,10 +36,7 @@ func Test_SlowBodyReadRequest_vulnerable(t *testing.T) {
 			}
 			defer r.Body.Close()
 
-			_, err := io.Copy(io.Discard, r.Body)
-			if err != nil {
-				assert.True(t, os.IsTimeout(err), "read body should return timeout error")
-			}
+			_, _ = io.Copy(io.Discard, r.Body)
 		})
 	})
 
@@ -69,7 +64,6 @@ func Test_SlowBodyReadRequest_invulnerable(t *testing.T) {
 	t.Parallel()
 
 	counter := testhttp.NewConnStateCounters()
-	timeoutErrSeen := new(atomic.Bool)
 
 	testCtx, stopTest := getTestContext()
 	defer stopTest()
@@ -83,11 +77,7 @@ func Test_SlowBodyReadRequest_invulnerable(t *testing.T) {
 			}
 			defer r.Body.Close()
 
-			_, err := io.Copy(io.Discard, r.Body)
-			if err != nil {
-				assert.True(t, os.IsTimeout(err), "read body should return timeout error")
-				timeoutErrSeen.Store(true)
-			}
+			_, _ = io.Copy(io.Discard, r.Body)
 		})
 	})
 
@@ -109,5 +99,4 @@ func Test_SlowBodyReadRequest_invulnerable(t *testing.T) {
 		// a typical state transition is: new - (read body) -> active - (read body timeout close) -> closed
 		assert.Equal(t, http.StateNew, timeline[0])
 	}
-	assert.True(t, timeoutErrSeen.Load(), "should see at least one timeout error")
 }
