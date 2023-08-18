@@ -69,7 +69,7 @@ func (s *slowReader) Read(p []byte) (n int, err error) {
 
 // SlowBodyReadRequest provides the configurations for simulating slow request body reading attack.
 type SlowBodyReadRequest struct {
-	Target *Target `embed:""`
+	Target Target `embed:""`
 
 	// Method - the HTTP method to use, one of POST / PUT. Defaults to POST.
 	Method string `name:"http-method" help:"the HTTP method to use, one of POST / PUT. Defaults to POST."`

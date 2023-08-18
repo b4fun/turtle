@@ -11,7 +11,7 @@ import (
 
 // Slowloris provides the configurations for running slowloris attack.
 type Slowloris struct {
-	Target *Target `embed:""`
+	Target Target `embed:""`
 
 	// Method - the HTTP method to use. Defaults to GET
 	Method string `name:"http-method" help:"the HTTP method to use. Defaults to GET"`
