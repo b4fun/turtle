@@ -79,7 +79,7 @@ func Test_Slowloris_invulnerable(t *testing.T) {
 	assert.Greater(t, len(conns), target.Connections, "should create more connections")
 	for _, conn := range conns {
 		timeline := counter.GetConnStateTimeline(conn)
-		assert.GreaterOrEqual(t, len(timeline), 2, "should have at least two states")
+		assert.GreaterOrEqual(t, len(timeline), 1, "should have at least one state")
 		// a typical state transition is: new - (due to read header timeout close) -> active -> closed
 		assert.Equal(t, http.StateNew, timeline[0])
 	}

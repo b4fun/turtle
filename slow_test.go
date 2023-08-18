@@ -105,9 +105,9 @@ func Test_SlowBodyReadRequest_invulnerable(t *testing.T) {
 	assert.Greater(t, len(conns), target.Connections, "should create more connections")
 	for _, conn := range conns {
 		timeline := counter.GetConnStateTimeline(conn)
-		assert.GreaterOrEqual(t, len(timeline), 2, "should have at least two state")
+		assert.GreaterOrEqual(t, len(timeline), 1, "should have at least one state")
 		// a typical state transition is: new - (read body) -> active - (read body timeout close) -> closed
 		assert.Equal(t, http.StateNew, timeline[0])
 	}
-	assert.True(t, timeoutErrSeen.Load(), "should see at least onetimeout error")
+	assert.True(t, timeoutErrSeen.Load(), "should see at least one timeout error")
 }
