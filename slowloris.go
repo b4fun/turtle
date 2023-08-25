@@ -30,6 +30,9 @@ type Slowloris struct {
 	// WriteTimeout - the timeout for writing the request header. Defaults to 10s.
 	WriteTimeout time.Duration `name:"http-write-timeout" help:"the timeout for writing the request header. Defaults to 10s."`
 
+	// EventHandler - optional event handler for observing events.
+	EventHandler EventHandler `kong:"-"`
+
 	// dial - for unit test
 	dial func(network, address string) (net.Conn, error)
 
@@ -59,6 +62,12 @@ func (s *Slowloris) defaults() error {
 	if s.randn == nil {
 		s.randn = defaultRandn()
 	}
+	if isNil(s.EventHandler) {
+		s.EventHandler = nilEventHandler
+		s.EventHandler = EventHandleFunc(func(event Event) {
+			fmt.Println(event.Name, event.At)
+		})
+	}
 
 	return nil
 }
@@ -75,8 +84,13 @@ func (s *Slowloris) Run(ctx context.Context) error {
 		workerCtx,
 		s.Target.Connections,
 		func(ctx context.Context) {
+			start := time.Now()
+
 			// TODO: log error
-			_ = s.worker(ctx)
+			err := s.worker(ctx)
+			if err != nil {
+				fmt.Printf("worker: %v d=%s\n", err, time.Since(start))
+			}
 		},
 	)
 
@@ -114,13 +128,22 @@ func (s *Slowloris) initAttack(conn io.Writer) error {
 	return nil
 }
 
+func (s *Slowloris) emitEvent(eventName string) {
+	s.EventHandler.HandleEvent(Event{
+		Name: eventName,
+		At:   time.Now(),
+	})
+}
+
 func (s *Slowloris) worker(ctx context.Context) error {
 	conn, err := s.dial("tcp", s.Target.Url.Host)
 	if err != nil {
 		return fmt.Errorf("dial %q: %w", s.Target.Url.Host, err)
 	}
+	s.emitEvent(EventTCPDial)
 	defer func() {
 		_ = conn.Close()
+		s.emitEvent(EventTCPClosed)
 	}()
 
 	if err := s.setupTCPConnIfNeeded(conn); err != nil {
@@ -149,7 +172,7 @@ func (s *Slowloris) worker(ctx context.Context) error {
 		} else {
 			// slow start 50 ~ 100ms to make sure slow http server like python -mhttp.server
 			// can handle it
-			slowStartInterval := time.Duration(s.randn(50) + 50) * time.Millisecond 
+			slowStartInterval := time.Duration(s.randn(50) + 50) * time.Millisecond
 			interval := nextInterval + slowStartInterval
 			gibberishTimer = time.NewTimer(interval)
 		}

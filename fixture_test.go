@@ -23,7 +23,7 @@ func getTestDuration(t testing.TB) time.Duration {
 		return d
 	}
 
-	return 3 * time.Second
+	return 10 * time.Second
 }
 
 func getTestConnections(t testing.TB) int {

@@ -49,7 +49,9 @@ func httpLine(s string) string {
 }
 
 func writeHTTPLineTo(w io.Writer, s string) error {
+
 	l := httpLine(s)
+	fmt.Println("writing ", l)
 	n, err := w.Write([]byte(l))
 	if err != nil {
 		return err
