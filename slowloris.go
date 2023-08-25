@@ -147,7 +147,11 @@ func (s *Slowloris) worker(ctx context.Context) error {
 		if gibberishTimer != nil {
 			gibberishTimer.Reset(nextInterval)
 		} else {
-			gibberishTimer = time.NewTimer(nextInterval)
+			// slow start 50 ~ 100ms to make sure slow http server like python -mhttp.server
+			// can handle it
+			slowStartInterval := time.Duration(s.randn(50) + 50) * time.Millisecond 
+			interval := nextInterval + slowStartInterval
+			gibberishTimer = time.NewTimer(interval)
 		}
 
 		return gibberishTimer.C
