@@ -83,7 +83,7 @@ func (s *Slowloris) Run(ctx context.Context) error {
 	runWithWorker(
 		workerCtx,
 		s.Target.Connections,
-		func(ctx context.Context) {
+		func(ctx context.Context, workerId int) {
 			start := time.Now()
 
 			// TODO: log error

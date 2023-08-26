@@ -109,7 +109,7 @@ func (s *SlowBodyReadRequest) Run(ctx context.Context) error {
 	runWithWorker(
 		workerCtx,
 		s.Target.Connections,
-		func(ctx context.Context) {
+		func(ctx context.Context, workerId int) {
 			// TODO: log error
 			_ = s.worker(ctx)
 		},
