@@ -2,6 +2,7 @@ package turtle
 
 import (
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,8 +28,9 @@ func Test_Slowloris_single(t *testing.T) {
 	testCtx, stopTest := getTestContext()
 	defer stopTest()
 
+	const readHeaderTimeout = 300 * time.Millisecond
 	serverUrl, serverStopped := testhttp.CreateTestServer(testCtx, t, func(s *http.Server) {
-		s.ReadHeaderTimeout = 300 * time.Millisecond
+		s.ReadHeaderTimeout = readHeaderTimeout
 		s.ConnState = counter.ServerConnState
 	})
 
@@ -40,11 +42,22 @@ func Test_Slowloris_single(t *testing.T) {
 		GibberishInterval: 10 * time.Millisecond,
 	}
 
-	assert.NoError(t, attack.Run(testCtx, NilEventHandler))
+	var (
+		events []Event
+		eventMu sync.Mutex
+	)
+	eventHandler := EventHandleFunc(func(e Event) {
+		eventMu.Lock()
+		defer eventMu.Unlock()
+		events = append(events, e)
+	})
+
+	assert.NoError(t, attack.Run(testCtx, eventHandler))
 	stopTest()
 	<-serverStopped
 
 	t.Log(counter.String())
+	t.Log(eventsSeqToString(events))
 
 	conns := counter.GetConns()
 	assert.NotEmpty(t, conns, "should have at least one connection")
@@ -54,6 +67,24 @@ func Test_Slowloris_single(t *testing.T) {
 		assert.GreaterOrEqual(t, len(timeline), 1, "should have at least one state")
 		// a typical state transition is: new - (due to server close) -> active -> closed
 		assert.Equal(t, http.StateNew, timeline[0])
+	}
+
+	var lastDialEvent *Event
+	for idx := 0; idx < len(events) - 1; idx++{ // NOTE: skip the last event as it might be closed by the worker not server
+		event := events[idx]
+		switch event.Name {
+		case EventTCPDial:
+			lastDialEvent = &event
+		case EventTCPClosed:
+			assert.NotNil(t, lastDialEvent, "missing dial event for closed at index %d", idx)
+
+			duration := event.At.Sub(lastDialEvent.At)
+			timeoutDelta := duration - readHeaderTimeout
+			if timeoutDelta < 0 {
+				timeoutDelta = -timeoutDelta
+			}
+			assert.LessOrEqual(t, timeoutDelta, 100*time.Millisecond, "timeout delta should be less than 100ms")
+		}
 	}
 }
 
