@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,7 +14,7 @@ import (
 )
 
 type CLI struct {
-	ServerAddr string `cmd:"server-addr" help:"the address to listen on" default:"127.0.0.1:8888"`
+	ServerAddr string `cmd:"server-addr" help:"the address to listen on" default:"127.0.0.1:8889"`
 	Scenario   string `cmd:"scenario" enum:"none,proof" help:"the scenario to run" default:"none"`
 
 	ServerReadHeaderTimeout time.Duration `cmd:"server-read-header-timeout" help:"the amount of time allowed to read request headers. Non-positive value means no timeout"`
@@ -54,6 +55,10 @@ func (c *CLI) CreateServer() *http.Server {
 		ReadHeaderTimeout: c.ServerReadHeaderTimeout,
 		ReadTimeout:       c.ServerReadTimeout,
 		WriteTimeout:      c.ServerWriteTimeout,
+
+		ConnState: func(conn net.Conn, state http.ConnState) {
+			fmt.Println("ConnState", conn.RemoteAddr(), state)
+		},
 
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("here")
