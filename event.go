@@ -6,9 +6,13 @@ import (
 	"time"
 )
 
+// Event represents an event.
 type Event struct {
+	// Name - event name
 	Name string
+	// At - event time
 	At time.Time
+	// Attrs - optional event attributes
 	Attrs map[string]any
 }
 
@@ -17,8 +21,10 @@ const (
 	eventAttrError = "error"
 )
 
+// EventSettings configures an event.
 type EventSettings func(e *Event)
 
+// WithEventWorkerId binds the worker id of the event attrs.
 func WithEventWorkerId(workerId int) EventSettings {
 	return func(e *Event) {
 		if e.Attrs == nil {
@@ -28,6 +34,7 @@ func WithEventWorkerId(workerId int) EventSettings {
 	}
 }
 
+// WithEventError binds the error of the event attrs.
 func WithEventError(err error) EventSettings {
 	return func(e *Event) {
 		if e.Attrs == nil {
@@ -37,6 +44,7 @@ func WithEventError(err error) EventSettings {
 	}
 }
 
+// NewEvent creates a new event.
 func NewEvent(eventName string, settings ...EventSettings) Event {
 	rv := Event{
 		Name: eventName,
@@ -49,6 +57,7 @@ func NewEvent(eventName string, settings ...EventSettings) Event {
 	return rv
 }
 
+// EventHandler handles events.
 type EventHandler interface {
 	HandleEvent(event Event)
 }
@@ -88,6 +97,7 @@ func capturePanic(f EventHandler) func() {
 	}
 }
 
+// NilEventHandler is an event handler that does nothing.
 var NilEventHandler EventHandler = EventHandleFunc(func(event Event) {})
 
 func isNil(v any) bool {
