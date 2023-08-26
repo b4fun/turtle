@@ -19,10 +19,6 @@ func runWithWorker(ctx context.Context, n int, f func(ctx context.Context, worke
 			defer func() {
 				wg.Done()
 				work <- workerId
-
-				if r := recover(); r != nil {
-					// TODO: log error
-				}
 			}()
 
 			f(ctx, workerId)

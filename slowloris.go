@@ -30,9 +30,6 @@ type Slowloris struct {
 	// WriteTimeout - the timeout for writing the request header. Defaults to 10s.
 	WriteTimeout time.Duration `name:"http-write-timeout" help:"the timeout for writing the request header. Defaults to 10s."`
 
-	// EventHandler - optional event handler for observing events.
-	EventHandler EventHandler `kong:"-"`
-
 	// dial - for unit test
 	dial func(network, address string) (net.Conn, error)
 
@@ -62,17 +59,11 @@ func (s *Slowloris) defaults() error {
 	if s.randn == nil {
 		s.randn = defaultRandn()
 	}
-	if isNil(s.EventHandler) {
-		s.EventHandler = nilEventHandler
-		s.EventHandler = EventHandleFunc(func(event Event) {
-			fmt.Println(event.Name, event.At)
-		})
-	}
 
 	return nil
 }
 
-func (s *Slowloris) Run(ctx context.Context) error {
+func (s *Slowloris) Run(ctx context.Context, eventHandler EventHandler) error {
 	if err := s.defaults(); err != nil {
 		return err
 	}
@@ -84,12 +75,13 @@ func (s *Slowloris) Run(ctx context.Context) error {
 		workerCtx,
 		s.Target.Connections,
 		func(ctx context.Context, workerId int) {
-			start := time.Now()
+			workerEventHandler := wrapEventSettings(eventHandler, WithEventWorkerId(workerId))
 
-			// TODO: log error
-			err := s.worker(ctx)
+			defer capturePanic(workerEventHandler)
+
+			err := s.worker(ctx, workerEventHandler)
 			if err != nil {
-				fmt.Printf("worker: %v d=%s\n", err, time.Since(start))
+				workerEventHandler.HandleEvent(NewEvent(EventWorkerError, WithEventError(err)))
 			}
 		},
 	)
@@ -128,22 +120,15 @@ func (s *Slowloris) initAttack(conn io.Writer) error {
 	return nil
 }
 
-func (s *Slowloris) emitEvent(eventName string) {
-	s.EventHandler.HandleEvent(Event{
-		Name: eventName,
-		At:   time.Now(),
-	})
-}
-
-func (s *Slowloris) worker(ctx context.Context) error {
+func (s *Slowloris) worker(ctx context.Context, eventHandler EventHandler) error {
 	conn, err := s.dial("tcp", s.Target.Url.Host)
 	if err != nil {
 		return fmt.Errorf("dial %q: %w", s.Target.Url.Host, err)
 	}
-	s.emitEvent(EventTCPDial)
+	eventHandler.HandleEvent(NewEvent(EventTCPDial))
 	defer func() {
 		_ = conn.Close()
-		s.emitEvent(EventTCPClosed)
+		eventHandler.HandleEvent(NewEvent(EventTCPClosed))
 	}()
 
 	if err := s.setupTCPConnIfNeeded(conn); err != nil {

@@ -40,7 +40,7 @@ func Test_Slowloris_single(t *testing.T) {
 		GibberishInterval: 10 * time.Millisecond,
 	}
 
-	assert.NoError(t, attack.Run(testCtx))
+	assert.NoError(t, attack.Run(testCtx, NilEventHandler))
 	stopTest()
 	<-serverStopped
 
@@ -73,7 +73,7 @@ func Test_Slowloris_vulnerable(t *testing.T) {
 	target := getTestTarget(t, *serverUrl)
 	attack := Slowloris{Target: target, SendGibberish: true, GibberishInterval: 10 * time.Millisecond}
 
-	assert.NoError(t, attack.Run(testCtx))
+	assert.NoError(t, attack.Run(testCtx, NilEventHandler))
 	stopTest()
 	<-serverStopped
 
@@ -106,7 +106,7 @@ func Test_Slowloris_invulnerable(t *testing.T) {
 	target := getTestTarget(t, *serverUrl)
 	attack := Slowloris{Target: target, SendGibberish: true, GibberishInterval: 10 * time.Millisecond}
 
-	assert.NoError(t, attack.Run(testCtx))
+	assert.NoError(t, attack.Run(testCtx, NilEventHandler))
 	stopTest()
 	<-serverStopped
 
