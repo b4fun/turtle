@@ -18,7 +18,7 @@ type Event struct {
 
 const (
 	eventAttrWorkerId = "workerId"
-	eventAttrError = "error"
+	eventAttrError    = "error"
 )
 
 // EventSettings configures an event.
@@ -48,7 +48,7 @@ func WithEventError(err error) EventSettings {
 func NewEvent(eventName string, settings ...EventSettings) Event {
 	rv := Event{
 		Name: eventName,
-		At: time.Now(),
+		At:   time.Now(),
 	}
 	for _, s := range settings {
 		s(&rv)
@@ -84,13 +84,13 @@ func (f *curriedEventHandler) HandleEvent(event Event) {
 func wrapEventSettings(f EventHandler, settings ...EventSettings) EventHandler {
 	return &curriedEventHandler{
 		EventHandler: f,
-		settings: settings,
+		settings:     settings,
 	}
 }
 
 func capturePanic(f EventHandler) func() {
 	return func() {
-		if r:= recover(); r != nil {
+		if r := recover(); r != nil {
 			err := fmt.Errorf("panic: %s", r)
 			f.HandleEvent(NewEvent(EventWorkerPanic, WithEventError(err)))
 		}
@@ -115,9 +115,51 @@ func isNil(v any) bool {
 }
 
 const (
-	EventTCPDial = "tcp/dial"
+	EventTCPDial   = "tcp/dial"
 	EventTCPClosed = "tcp/closed"
 
 	EventWorkerError = "worker/error"
 	EventWorkerPanic = "worker/panic"
 )
+
+type AsyncEventHandler struct {
+	q    chan Event
+	stop chan struct{}
+}
+
+var _ EventHandler = (*AsyncEventHandler)(nil)
+
+func NewAsyncEventHandler(h EventHandler, cap int) *AsyncEventHandler {
+	rv := &AsyncEventHandler{
+		q:    make(chan Event, cap),
+		stop: make(chan struct{}),
+	}
+
+	rv.start(h)
+
+	return rv
+}
+
+func (f *AsyncEventHandler) HandleEvent(event Event) {
+	f.q <- event
+}
+
+func (f *AsyncEventHandler) start(h EventHandler) {
+	go func() {
+		for {
+			select {
+			case <-f.stop:
+				// NOTE: q is left open as we don't want emitter to panic
+				// TODO: refine this implementation...
+				return
+			case event := <-f.q:
+				h.HandleEvent(event)
+			}
+		}
+	}()
+}
+
+func (f *AsyncEventHandler) Close() error {
+	close(f.stop)
+	return nil
+}
