@@ -34,16 +34,8 @@ func Test_Slowloris_single(t *testing.T) {
 		s.ConnState = counter.ServerConnState
 	})
 
-	target := getTestTarget(t, *serverUrl)
-	target.Connections = 1
-	attack := Slowloris{
-		Target: target,
-		SendGibberish: true,
-		GibberishInterval: 10 * time.Millisecond,
-	}
-
 	var (
-		events []Event
+		events  []Event
 		eventMu sync.Mutex
 	)
 	eventHandler := EventHandleFunc(func(e Event) {
@@ -52,7 +44,16 @@ func Test_Slowloris_single(t *testing.T) {
 		events = append(events, e)
 	})
 
-	assert.NoError(t, attack.Run(testCtx, eventHandler))
+	target := getTestTarget(t, *serverUrl)
+	target.Connections = 1
+	target.EventHandler = eventHandler
+	attack := Slowloris{
+		Target:            target,
+		SendGibberish:     true,
+		GibberishInterval: 10 * time.Millisecond,
+	}
+
+	assert.NoError(t, attack.Run(testCtx))
 	stopTest()
 	<-serverStopped
 
@@ -70,7 +71,7 @@ func Test_Slowloris_single(t *testing.T) {
 	}
 
 	var lastDialEvent *Event
-	for idx := 0; idx < len(events) - 1; idx++{ // NOTE: skip the last event as it might be closed by the worker not server
+	for idx := 0; idx < len(events)-1; idx++ { // NOTE: skip the last event as it might be closed by the worker not server
 		event := events[idx]
 		switch event.Name {
 		case EventTCPDial:
@@ -104,7 +105,7 @@ func Test_Slowloris_vulnerable(t *testing.T) {
 	target := getTestTarget(t, *serverUrl)
 	attack := Slowloris{Target: target, SendGibberish: true, GibberishInterval: 10 * time.Millisecond}
 
-	assert.NoError(t, attack.Run(testCtx, NilEventHandler))
+	assert.NoError(t, attack.Run(testCtx))
 	stopTest()
 	<-serverStopped
 
@@ -137,7 +138,7 @@ func Test_Slowloris_invulnerable(t *testing.T) {
 	target := getTestTarget(t, *serverUrl)
 	attack := Slowloris{Target: target, SendGibberish: true, GibberishInterval: 10 * time.Millisecond}
 
-	assert.NoError(t, attack.Run(testCtx, NilEventHandler))
+	assert.NoError(t, attack.Run(testCtx))
 	stopTest()
 	<-serverStopped
 

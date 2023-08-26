@@ -28,7 +28,7 @@ func ExampleSlowloris() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_ = s.Run(ctx, NilEventHandler)
+	_ = s.Run(ctx)
 }
 
 func ExampleSlowBodyReadRequest() {

@@ -110,15 +110,21 @@ func (s *SlowBodyReadRequest) Run(ctx context.Context) error {
 		workerCtx,
 		s.Target.Connections,
 		func(ctx context.Context, workerId int) {
-			// TODO: log error
-			_ = s.worker(ctx)
+			workerEventHandler := wrapEventSettings(s.Target.EventHandler, WithEventWorkerId(workerId))
+
+			defer capturePanic(workerEventHandler)
+
+			err := s.worker(ctx, workerEventHandler)
+			if err != nil {
+				workerEventHandler.HandleEvent(NewEvent(EventWorkerError, WithEventError(err)))
+			}
 		},
 	)
 
 	return nil
 }
 
-func (s *SlowBodyReadRequest) worker(ctx context.Context) error {
+func (s *SlowBodyReadRequest) worker(ctx context.Context, eventHandler EventHandler) error {
 	body := startSlowReader(ctx, s.BodyReadTimeout, s.randn)
 
 	req, err := http.NewRequestWithContext(ctx, s.Method, s.Target.Url.String(), body)
@@ -127,6 +133,12 @@ func (s *SlowBodyReadRequest) worker(ctx context.Context) error {
 	}
 
 	client := http.Client{}
+
+	eventHandler.HandleEvent(NewEvent(EventTCPDial))
+	defer func() {
+		eventHandler.HandleEvent(NewEvent(EventTCPClosed))
+	}()
+
 	_, err = client.Do(req)
 	if err != nil {
 		return err

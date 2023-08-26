@@ -63,7 +63,7 @@ func (s *Slowloris) defaults() error {
 	return nil
 }
 
-func (s *Slowloris) Run(ctx context.Context, eventHandler EventHandler) error {
+func (s *Slowloris) Run(ctx context.Context) error {
 	if err := s.defaults(); err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (s *Slowloris) Run(ctx context.Context, eventHandler EventHandler) error {
 		workerCtx,
 		s.Target.Connections,
 		func(ctx context.Context, workerId int) {
-			workerEventHandler := wrapEventSettings(eventHandler, WithEventWorkerId(workerId))
+			workerEventHandler := wrapEventSettings(s.Target.EventHandler, WithEventWorkerId(workerId))
 
 			defer capturePanic(workerEventHandler)
 

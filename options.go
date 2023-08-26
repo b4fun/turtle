@@ -13,6 +13,9 @@ type Target struct {
 	Duration time.Duration `name:"target-duration" help:"the duration of the attack. Defaults to 30s"`
 	// Connections - the number of connections to be made. Defaults to 100.
 	Connections int `name:"target-connections" help:"the number of connections to be made. Defaults to 100"`
+
+	// EventHandler - optional event handler to use.
+	EventHandler EventHandler `kong:"-"`
 }
 
 func (t *Target) defaults() error {
@@ -21,6 +24,9 @@ func (t *Target) defaults() error {
 	}
 	if t.Connections < 1 {
 		t.Connections = 100
+	}
+	if isNil(t.EventHandler) {
+		t.EventHandler = NilEventHandler
 	}
 
 	return nil
