@@ -34,6 +34,17 @@ func WithEventWorkerId(workerId int) EventSettings {
 	}
 }
 
+func WorkerIdFromEvent(e Event) (id string, ok bool) {
+	if e.Attrs != nil {
+		var v any
+		v, ok = e.Attrs[eventAttrWorkerId]
+		if ok {
+			id, ok = v.(string)
+		}
+	}
+	return id, ok
+}
+
 // WithEventError binds the error of the event attrs.
 func WithEventError(err error) EventSettings {
 	return func(e *Event) {
@@ -42,6 +53,17 @@ func WithEventError(err error) EventSettings {
 		}
 		e.Attrs[eventAttrError] = err
 	}
+}
+
+func ErrorFromEvent(e Event) (err error, ok bool) {
+	if e.Attrs != nil {
+		var v any
+		v, ok = e.Attrs[eventAttrWorkerId]
+		if ok {
+			err, ok = v.(error)
+		}
+	}
+	return err, ok
 }
 
 // NewEvent creates a new event.
