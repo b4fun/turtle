@@ -34,12 +34,12 @@ func WithEventWorkerId(workerId int) EventSettings {
 	}
 }
 
-func WorkerIdFromEvent(e Event) (id string, ok bool) {
+func WorkerIdFromEvent(e Event) (id int, ok bool) {
 	if e.Attrs != nil {
 		var v any
 		v, ok = e.Attrs[eventAttrWorkerId]
 		if ok {
-			id, ok = v.(string)
+			id, ok = v.(int)
 		}
 	}
 	return id, ok
@@ -58,7 +58,7 @@ func WithEventError(err error) EventSettings {
 func ErrorFromEvent(e Event) (err error, ok bool) {
 	if e.Attrs != nil {
 		var v any
-		v, ok = e.Attrs[eventAttrWorkerId]
+		v, ok = e.Attrs[eventAttrError]
 		if ok {
 			err, ok = v.(error)
 		}
