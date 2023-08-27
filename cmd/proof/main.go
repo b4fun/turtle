@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -62,6 +63,14 @@ func (c *CLI) CreateServer() *http.Server {
 
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("here")
+
+			if r.Body != nil {
+				fmt.Println("read body")
+				if _, err := io.ReadAll(r.Body); err != nil {
+					fmt.Println("read error", err)
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			}
 
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("ok"))

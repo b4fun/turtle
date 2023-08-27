@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/b4fun/turtle"
 	"github.com/charmbracelet/bubbles/progress"
@@ -13,9 +15,10 @@ import (
 )
 
 type UIUpdate struct {
-	CountConnected int
-	CountTotal     int
-	EventDesc      string
+	target         string
+	countConnected int64
+	countClosed    int64
+	eventDescs     []string
 }
 
 func formatEvent(event turtle.Event) string {
@@ -24,11 +27,13 @@ func formatEvent(event turtle.Event) string {
 	err, hasErr := turtle.ErrorFromEvent(event)
 	if hasErr {
 		s += lipgloss.NewStyle().Foreground(lipgloss.Color("9")).SetString("x").String()
+	} else {
+		s += " "
 	}
 
 	workerId, hasWorkerId := turtle.WorkerIdFromEvent(event)
 	if hasWorkerId {
-		s += fmt.Sprintf(" [%s]", workerId)
+		s += fmt.Sprintf(" [%03d]", workerId)
 	}
 
 	s += " " + event.Name
@@ -40,34 +45,58 @@ func formatEvent(event turtle.Event) string {
 	return s
 }
 
-func UIEventHandler(target turtle.Target, program *tea.Program) turtle.EventHandler {
-	countTotal := target.Connections
-
+func UIEventHandler(
+	ctx context.Context,
+	program *tea.Program,
+	target turtle.Target,
+	updateInterval time.Duration,
+) turtle.EventHandler {
 	var (
-		l           sync.Mutex
-		countDialed int
+		startOnce sync.Once
+		l         sync.Mutex
+		update    UIUpdate
 	)
 
+	start := func() {
+		go func() {
+			update.target = target.Url.String()
+
+			ticker := time.NewTicker(updateInterval)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					var u UIUpdate
+					l.Lock()
+					u = update
+					update.eventDescs = nil
+					l.Unlock()
+
+					program.Send(u)
+				}
+			}
+		}()
+	}
+
 	h := turtle.EventHandleFunc(func(event turtle.Event) {
-		var update UIUpdate
-		update.CountTotal = countTotal
+		startOnce.Do(start)
 
 		l.Lock()
 		switch event.Name {
 		case turtle.EventTCPDial:
-			countDialed = max(countTotal, countDialed+1)
-			update.EventDesc = formatEvent(event)
+			update.countConnected += 1
 		case turtle.EventTCPClosed:
-			countDialed = max(0, countDialed-1)
-			update.EventDesc = formatEvent(event)
+			update.countClosed += 1
 		case turtle.EventWorkerError, turtle.EventWorkerPanic:
-			update.EventDesc = formatEvent(event)
+			update.eventDescs = append(
+				update.eventDescs,
+				formatEvent(event),
+			)
 		}
 		l.Unlock()
-
-		update.CountConnected = countDialed
-
-		program.Send(update)
 	})
 
 	return turtle.NewAsyncEventHandler(h, 1000)
@@ -77,6 +106,10 @@ type UI struct {
 	width  int
 	height int
 
+	target         string
+	countConnected int64
+	countClosed    int64
+
 	spinner  spinner.Model
 	progress progress.Model
 }
@@ -84,7 +117,7 @@ type UI struct {
 func newUI() *UI {
 	s := spinner.New(spinner.WithSpinner(spinner.Meter))
 	p := progress.New(
-		progress.WithDefaultGradient(),
+		progress.WithSolidFill("#5A56E0"),
 		progress.WithWidth(40),
 		progress.WithoutPercentage(),
 	)
@@ -113,17 +146,22 @@ func (ui *UI) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	case UIUpdate:
 		var cmds []tea.Cmd
 
+		ui.target = message.target
+		ui.countConnected = message.countConnected
+		ui.countClosed = message.countClosed
+		ratio := float64(message.countConnected) / float64(message.countConnected+message.countClosed)
+
 		// Update progress bar
 		cmds = append(
 			cmds,
-			ui.progress.SetPercent(float64(message.CountConnected)/float64(message.CountTotal)),
+			ui.progress.SetPercent(ratio),
 		)
 
 		// Print event log
-		if message.EventDesc != "" {
+		if len(message.eventDescs) > 0 {
 			cmds = append(
 				cmds,
-				tea.Printf(message.EventDesc),
+				tea.Printf(strings.Join(message.eventDescs, "\n")),
 			)
 		}
 
@@ -144,13 +182,16 @@ func (ui *UI) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (ui *UI) View() string {
-	spin := ui.spinner.View() + " "
+	bannerLine := ui.spinner.View() + " (press q to quit)"
+	targetLine := fmt.Sprintf("target: %s", ui.target)
+
 	prog := ui.progress.View()
+	cellsAvail := max(0, ui.width-lipgloss.Width(prog))
 
-	cellsRemaining := max(0, ui.width-lipgloss.Width(spin+prog))
-	gap := strings.Repeat(" ", cellsRemaining)
+	infoDesc := fmt.Sprintf("total connected %d / total closed %d ", ui.countConnected, ui.countClosed)
+	info := lipgloss.NewStyle().MaxWidth(cellsAvail).Render(infoDesc)
 
-	return spin + prog + gap
+	return "\n" + targetLine + "\n" + info + prog + "\n" + bannerLine
 }
 
 func max(a, b int) int {

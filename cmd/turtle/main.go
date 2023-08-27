@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/alecthomas/kong"
 	tea "github.com/charmbracelet/bubbletea"
@@ -26,23 +27,28 @@ func main() {
 
 	prog := tea.NewProgram(newUI())
 	CLI.Slowloris.Target.EventHandler = UIEventHandler(
-		CLI.Slowloris.Target,
+		ctx,
 		prog,
+		CLI.Slowloris.Target,
+		500*time.Millisecond,
 	)
 	CLI.SlowBodyRead.Target.EventHandler = UIEventHandler(
-		CLI.SlowBodyRead.Target,
+		ctx,
 		prog,
+		CLI.SlowBodyRead.Target,
+		500*time.Millisecond,
 	)
 
 	go func() {
-		err := cliCtx.Run()
-		prog.Quit()
-		if err != nil {
+		if _, err := prog.Run(); err != nil {
 			cliCtx.FatalIfErrorf(err)
 		}
+		cancel()
 	}()
 
-	if _, err := prog.Run(); err != nil {
+	err := cliCtx.Run()
+	go prog.Quit()
+	if err != nil {
 		cliCtx.FatalIfErrorf(err)
 	}
 }
