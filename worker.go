@@ -5,27 +5,23 @@ import (
 	"sync"
 )
 
-func runWithWorker(ctx context.Context, n int, f func(ctx context.Context)) {
+func runWithWorker(ctx context.Context, n int, f func(ctx context.Context, workerId int)) {
 	var wg sync.WaitGroup
-	work := make(chan struct{}, n)
+	work := make(chan int, n)
 
 	for i := 0; i < n; i++ {
-		work <- struct{}{}
+		work <- i
 	}
 
-	spawn := func() {
+	spawn := func(workerId int) {
 		wg.Add(1)
 		go func() {
 			defer func() {
 				wg.Done()
-				work <- struct{}{}
-
-				if r := recover(); r != nil {
-					// TODO: log error
-				}
+				work <- workerId
 			}()
 
-			f(ctx)
+			f(ctx, workerId)
 		}()
 	}
 
@@ -34,8 +30,8 @@ loop:
 		select {
 		case <-ctx.Done():
 			break loop
-		case <-work:
-			spawn()
+		case workerId := <-work:
+			spawn(workerId)
 		}
 	}
 
