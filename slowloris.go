@@ -159,6 +159,9 @@ func (s *Slowloris) worker(ctx context.Context, eventHandler EventHandler) error
 	gibberishInterval := s.GibberishInterval / time.Millisecond
 	var gibberishTimer *time.Timer
 	setGibberishTimer := func() <-chan time.Time {
+		// TODO: if no headers are being sent, the client side will not be able to detect
+		// if the connection is still alive. In this case, existing workers will be in parked state instead of error out.
+		// ref: https://github.com/golang/go/issues/15735
 		if !s.SendGibberish {
 			return nil
 		}
