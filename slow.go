@@ -81,6 +81,10 @@ type SlowBodyReadRequest struct {
 	randn randn
 }
 
+func (s *SlowBodyReadRequest) AfterApply() error {
+	return s.defaults()
+}
+
 func (s *SlowBodyReadRequest) defaults() error {
 	if err := s.Target.defaults(); err != nil {
 		return err

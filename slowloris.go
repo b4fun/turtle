@@ -37,6 +37,10 @@ type Slowloris struct {
 	randn randn
 }
 
+func (s *Slowloris) AfterApply() error {
+	return s.defaults()
+}
+
 func (s *Slowloris) defaults() error {
 	if err := s.Target.defaults(); err != nil {
 		return err
