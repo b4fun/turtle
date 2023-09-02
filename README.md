@@ -1,8 +1,8 @@
-<h1 align="center">
+<h3 align="center">
     <a href="https://github.com/b4fun/turtle">
         <img src="docs/assets/turtle-logo.png" width="220px" style="inline-block" />
     </a>
-</h1>
+</h3>
 
 🐢 Turtle is a toolkit for simulating and validating application layer denial-of-service attacks in both live and unit testing environments.
 
