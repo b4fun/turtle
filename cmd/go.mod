@@ -2,10 +2,8 @@ module github.com/b4fun/turtle/cmd
 
 go 1.20
 
-replace github.com/b4fun/turtle => ../
-
 require (
-	github.com/b4fun/turtle v0.0.0-00010101000000-000000000000
+	github.com/b4fun/turtle v0.0.2
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.7.1
