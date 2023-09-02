@@ -6,7 +6,7 @@
 
 > **Important**: The use of this program for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to comply with all applicable local, state, and federal laws. The developers assume no liability and are not responsible for any misuse or damage caused by this program.
 
-## 🎯 Why?
+## 🎯 Why Use Turtle?
 
 Exposing an application to the public internet is fraught with risks due to various types of denial-of-service attacks, such as:
 
@@ -28,6 +28,13 @@ Turtle provides:
 - A Command-Line Interface (CLI) for validating real endpoints
 - A Golang library for easy integration into unit/integration tests
 
+### Supported Scenarios
+
+Turtle current supports the following scenarios:
+
+- [slowloris][cf_slowloris]
+- [slow body read][cf_low_and_slow]
+
 ## 🚀 Getting Started
 
 ### Turtle CLI
@@ -42,15 +49,30 @@ Or download a release binary from the [GitHub Release page][gh_release].
 
 ### Using Turtle CLI
 
+The turtle CLI embeds supported scenarios as sub-commands. A common way to invoke a scenario test:
+
+```
+$ turtle <scenario-name> <target-url>
+```
+
 ![](/docs/demo/demo.gif)
+
+Further details can be obtained by viewing the command's help message:
+
+
+```
+$ turtle -h
+# Scenario specified help
+$ turtle slowloris -h
+```
 
 ### Turtle Golang Library
 
 For the Golang library, documentation can be found on [GoDoc][godoc].
 
-## LICENSE
+## 📜 LICENSE
 
-Turtle is distributed under the [MIT license][LICENSE]
+Turtle is distributed under the [MIT license][/LICENSE]
 
 [cf_slowloris]: https://www.cloudflare.com/learning/ddos/ddos-attack-tools/slowloris/
 [cf_low_and_slow]: https://www.cloudflare.com/learning/ddos/ddos-low-and-slow-attack/
