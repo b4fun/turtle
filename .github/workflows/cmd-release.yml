@@ -3,7 +3,7 @@ name: goreleaser
 on:
   push:
     tags:
-    - 'cmd/*'
+    - '*'
 
 permissions:
   contents: write
@@ -25,7 +25,7 @@ jobs:
       with:
         distribution: goreleaser
         version: latest
-        args: release --rm-dist
+        args: release --clean
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         AZURE_STORAGE_ACCOUNT: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
