@@ -1,6 +1,15 @@
-# turtle
+<h1 align="center">
+    <a href="https://github.com/b4fun/turtle">
+        <img src="docs/assets/turtle-logo.png" width="220px" style="inline-block" />
+    </a>
+</h1>
 
 🐢 Turtle is a toolkit for simulating and validating application layer denial-of-service attacks in both live and unit testing environments.
+
+<p align="center">
+    <a href="https://github.com/b4fun/turtle/releases"><img src="https://img.shields.io/github/release/b4fun/turtle.svg" alt="Github release"></a>
+    <a href="https://pkg.go.dev/github.com/b4fun/turtle"><img src="https://pkg.go.dev/badge/github.com/b4fun/turtle.svg" alt="GoDoc" /></a>
+</p>
 
 ## 🚨 Disclaimer
 
