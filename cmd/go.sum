@@ -4,8 +4,8 @@ github.com/alecthomas/kong v0.8.0/go.mod h1:n1iCIO2xS46oE8ZfYCNDqdR0b0wZNrXAIAqr
 github.com/alecthomas/repr v0.1.0 h1:ENn2e1+J3k09gyj2shc0dHr/yjaWSHRlrJ4DPMevDqE=
 github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiErDT4WkJ2k=
 github.com/aymanbagabas/go-osc52/v2 v2.0.1/go.mod h1:uYgXzlJ7ZpABp8OJ+exZzJJhRNQ2ASbcXHWsFqH8hp8=
-github.com/b4fun/turtle v0.0.2 h1:KQ1bmylw1NIMLtlhRjA5pEIbdauOtbTVTVHUj0BRd8Y=
-github.com/b4fun/turtle v0.0.2/go.mod h1:uyKhRwB9MT7cTu1LtC6xPHhnmbm4OWjWaNCNlET/ZQ0=
+github.com/b4fun/turtle v0.0.3 h1:2j2iSohWHcI6uAU+Ig7V4OuHLs2ZenNYEfFQGfSYBhA=
+github.com/b4fun/turtle v0.0.3/go.mod h1:uyKhRwB9MT7cTu1LtC6xPHhnmbm4OWjWaNCNlET/ZQ0=
 github.com/charmbracelet/bubbles v0.16.1 h1:6uzpAAaT9ZqKssntbvZMlksWHruQLNxg49H5WdeuYSY=
 github.com/charmbracelet/bubbles v0.16.1/go.mod h1:2QCp9LFlEsBQMvIYERr7Ww2H2bA7xen1idUDIzm/+Xc=
 github.com/charmbracelet/bubbletea v0.24.2 h1:uaQIKx9Ai6Gdh5zpTbGiWpytMU+CfsPp06RaW2cx/SY=
