@@ -1,0 +1,12 @@
+Set Shell zsh
+Set FontSize 11
+Escape
+Type "[200~turtle slowloris http://localhost:8889 --http-send-gibberish"
+Escape
+Type "[201~"
+Enter
+Sleep 10s
+Type "q"
+Sleep 1s
+Ctrl+D
+Output slowloris-invulnerable.gif
