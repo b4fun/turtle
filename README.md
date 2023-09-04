@@ -75,6 +75,10 @@ $ turtle -h
 $ turtle slowloris -h
 ```
 
+To learn more, please checkout one of the following guides:
+
+- [Is my server Slowloris-proofed?](/docs/usage/cli-slowloris.md)
+
 ### Turtle Golang Library
 
 For the Golang library, documentation can be found on [GoDoc][godoc].
