@@ -85,7 +85,7 @@ For the Golang library, documentation can be found on [GoDoc][godoc].
 
 ## 📜 LICENSE
 
-Turtle is distributed under the [MIT license][/LICENSE]
+Turtle is distributed under the [MIT license](/LICENSE)
 
 [cf_slowloris]: https://www.cloudflare.com/learning/ddos/ddos-attack-tools/slowloris/
 [cf_low_and_slow]: https://www.cloudflare.com/learning/ddos/ddos-low-and-slow-attack/
