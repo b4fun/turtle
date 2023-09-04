@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -13,6 +13,8 @@ import (
 
 	"github.com/alecthomas/kong"
 )
+
+var logger = slog.Default().WithGroup("turtle-proof")
 
 type CLI struct {
 	ServerAddr string `cmd:"server-addr" help:"the address to listen on" default:"127.0.0.1:8889"`
@@ -58,16 +60,20 @@ func (c *CLI) CreateServer() *http.Server {
 		WriteTimeout:      c.ServerWriteTimeout,
 
 		ConnState: func(conn net.Conn, state http.ConnState) {
-			fmt.Println("ConnState", conn.RemoteAddr(), state)
+			logger.Info(
+				"ConnState",
+				slog.String("remote_addr", conn.RemoteAddr().String()),
+				slog.String("state", state.String()),
+			)
 		},
 
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Println("here")
+			logger.Info("handling request")
 
 			if r.Body != nil {
-				fmt.Println("read body")
+				logger.Info("reading body")
 				if _, err := io.ReadAll(r.Body); err != nil {
-					fmt.Println("read error", err)
+					logger.Error("read error", slog.String("error", err.Error()))
 					w.WriteHeader(http.StatusInternalServerError)
 				}
 			}
@@ -78,9 +84,29 @@ func (c *CLI) CreateServer() *http.Server {
 	}
 }
 
+const description = `
+Proof HTTP server for turtle test.
+
+## Start with default settings
+
+	turtle-proof
+
+## Start with proofed settings
+
+	turtle-proof --scenario proof
+
+## Using custom settings
+
+	turtle-proof --server-addr="127.0.0.1:8888" --server-read-header-timeout 3s --server-read-timeout 60s --server-write-timeout 60s
+`
+
 func main() {
 	cli := &CLI{}
-	cliCtx := kong.Parse(cli)
+	cliCtx := kong.Parse(
+		cli,
+		kong.Name("turtle-proof"),
+		kong.Description(description),
+	)
 
 	if err := cli.defaults(); err != nil {
 		cliCtx.FatalIfErrorf(err)
@@ -96,6 +122,9 @@ func main() {
 			cliCtx.FatalIfErrorf(err)
 		}
 	}()
+
+	time.Sleep(300 * time.Millisecond) // wait for server start
+	logger.Info("server started", slog.String("addr", server.Addr))
 
 	<-ctx.Done()
 
